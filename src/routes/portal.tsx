@@ -366,3 +366,156 @@ function Recover() {
     </div>
   );
 }
+
+/* =========================================================
+ * PAY TUITION FLOW — standalone, no session required.
+ * Step 1: lookup by matricule (or phone if unknown)
+ * Step 2: confirm "This is my child"
+ * Step 3: pay (partial allowed) via ParentPayDialog
+ * Realtime subscription keeps balance live during the flow.
+ * ========================================================= */
+function PayTuitionFlow() {
+  const lookup = useServerFn(findStudentForPayment);
+  const qc = useQueryClient();
+  const [mode, setMode] = useState<"matricule" | "phone">("matricule");
+  const [matricule, setMatricule] = useState("");
+  const [phone, setPhone] = useState("");
+  const [results, setResults] = useState<any[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [picked, setPicked] = useState<any | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+
+  // Live updates for the picked student so balance stays fresh.
+  useEffect(() => {
+    if (!picked?.id) return;
+    const ch = supabase.channel("pt-" + picked.id)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "students", filter: `id=eq.${picked.id}` }, async () => {
+        const fresh: any[] = await lookup({ data: { matricule: picked.matricule ?? undefined, phone: picked.matricule ? undefined : picked.parent_phone } });
+        const updated = fresh.find(r => r.id === picked.id);
+        if (updated) setPicked(updated);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [picked?.id, picked?.matricule, lookup]);
+
+  async function go() {
+    setBusy(true); setResults(null); setPicked(null); setConfirmed(false);
+    try {
+      const payload = mode === "matricule" ? { matricule: matricule.trim() } : { phone: phone.trim() };
+      const rows: any[] = await lookup({ data: payload });
+      setResults(rows);
+      if (rows.length === 1) setPicked(rows[0]);
+    } catch (e: any) { toast.error(e.message); }
+    finally { setBusy(false); }
+  }
+
+  // Adapter for ParentPayDialog (expects student shape with classes.name)
+  function pickedAsStudent() {
+    return picked ? {
+      id: picked.id, full_name: picked.full_name, matricule: picked.matricule,
+      classes: { name: picked.class_name },
+    } : null;
+  }
+
+  return (
+    <div className="card-surface p-8">
+      <h1 className="text-2xl font-bold">Pay tuition fee</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Enter the student's matricule. No matricule? Use the phone number you registered with.
+      </p>
+
+      <div className="mt-5 grid gap-3">
+        <div className="flex gap-2 text-sm">
+          <button onClick={() => setMode("matricule")}
+            className={"px-3 py-1.5 rounded-md border " + (mode === "matricule" ? "border-primary bg-primary-soft" : "border-border")}>
+            By matricule
+          </button>
+          <button onClick={() => setMode("phone")}
+            className={"px-3 py-1.5 rounded-md border " + (mode === "phone" ? "border-primary bg-primary-soft" : "border-border")}>
+            By phone number
+          </button>
+        </div>
+        {mode === "matricule" ? (
+          <div className="flex gap-2">
+            <input className="input-field flex-1" placeholder="e.g. DEMO-26-0001"
+              value={matricule} onChange={e => setMatricule(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && go()} />
+            <button onClick={go} disabled={busy || !matricule.trim()} className="btn-primary">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Search className="h-4 w-4" /> Find</>}
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input className="input-field flex-1" type="tel" placeholder="+237 6XX XXX XXX"
+              value={phone} onChange={e => setPhone(e.target.value)}
+              onKeyDown={e => e.key === "Enter" && go()} />
+            <button onClick={go} disabled={busy || !phone.trim()} className="btn-primary">
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Search className="h-4 w-4" /> Find</>}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {results && results.length === 0 && (
+        <div className="mt-5 text-sm text-muted-foreground">No matching student. Check the matricule or phone and try again.</div>
+      )}
+
+      {results && results.length > 1 && !picked && (
+        <div className="mt-5 grid gap-2">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Which child?</div>
+          {results.map(r => (
+            <button key={r.id} onClick={() => setPicked(r)}
+              className="text-left border border-border rounded-lg p-4 hover:border-primary transition">
+              <div className="font-semibold">{r.full_name}</div>
+              <div className="text-sm text-muted-foreground">{r.class_name ?? "—"} · {r.matricule ?? "no matricule"}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {picked && (
+        <div className="mt-6 rounded-lg border border-border p-5">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Confirm</div>
+          <div className="mt-1 text-xl font-bold">{picked.full_name}</div>
+          <div className="text-sm text-muted-foreground">{picked.class_name ?? "—"} · {picked.matricule ?? "no matricule yet"}</div>
+
+          {picked.application_status !== "APPROVED" || !picked.is_registered ? (
+            <div className="mt-4 rounded-md bg-warning/10 border border-warning/30 p-3 text-sm">
+              This student is not yet approved & registered. The bursar must complete registration before tuition can be paid.
+            </div>
+          ) : (
+            <>
+              <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded-md bg-muted p-3"><div className="text-xs text-muted-foreground">Total fee</div><div className="font-semibold">{picked.tuition_fee.toLocaleString()} {picked.currency}</div></div>
+                <div className="rounded-md bg-muted p-3"><div className="text-xs text-muted-foreground">Paid</div><div className="font-semibold">{picked.tuition_paid.toLocaleString()} {picked.currency}</div></div>
+                <div className="rounded-md bg-muted p-3"><div className="text-xs text-muted-foreground">Remaining</div><div className="font-semibold">{picked.tuition_owed.toLocaleString()} {picked.currency}</div></div>
+              </div>
+              {picked.tuition_owed === 0 ? (
+                <div className="mt-4 chip-success"><CheckCircle2 className="h-3.5 w-3.5" /> Tuition fully paid</div>
+              ) : !confirmed ? (
+                <div className="mt-4 flex gap-2">
+                  <button onClick={() => setConfirmed(true)} className="btn-primary">Yes, this is my child — continue</button>
+                  <button onClick={() => { setPicked(null); setConfirmed(false); }} className="btn-ghost">Pick another</button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </div>
+      )}
+
+      {picked && confirmed && picked.tuition_owed > 0 && pickedAsStudent() && (
+        <ParentPayDialog
+          student={pickedAsStudent()!}
+          type="TUITION"
+          amount={picked.tuition_owed}
+          onClose={() => {
+            setConfirmed(false);
+            // Refresh after dialog close
+            qc.invalidateQueries();
+            go();
+          }}
+        />
+      )}
+    </div>
+  );
+}
