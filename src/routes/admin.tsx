@@ -54,6 +54,16 @@ function AdminShell() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // Realtime — refresh any open admin query on student/transaction/print changes
+  useEffect(() => {
+    const ch = supabase.channel("admin-rt")
+      .on("postgres_changes", { event: "*", schema: "public", table: "students" }, () => qc.invalidateQueries())
+      .on("postgres_changes", { event: "*", schema: "public", table: "financial_transactions" }, () => qc.invalidateQueries())
+      .on("postgres_changes", { event: "*", schema: "public", table: "print_jobs" }, () => qc.invalidateQueries())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [qc]);
+
   async function signOut() {
     await qc.cancelQueries(); qc.clear();
     await supabase.auth.signOut();
