@@ -192,3 +192,37 @@ export const listStudentLedger = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// ============ REVENUE BY PAYMENT ROUTE ============
+// Buckets transactions into MOMO (MTN/Orange), CASH, BANK so the admin can
+// see how much money came through each route.
+export const getRevenueByRoute = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureAdmin(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("financial_transactions")
+      .select("amount, type, payment_method, status")
+      .eq("school_id", DEMO_SCHOOL_ID)
+      .eq("status", "SUCCESS");
+    if (error) throw new Error(error.message);
+    const buckets = {
+      MOMO:  { total: 0, registration: 0, tuition: 0, count: 0 },
+      CASH:  { total: 0, registration: 0, tuition: 0, count: 0 },
+      BANK:  { total: 0, registration: 0, tuition: 0, count: 0 },
+    } as Record<"MOMO" | "CASH" | "BANK", { total: number; registration: number; tuition: number; count: number }>;
+    for (const t of data ?? []) {
+      const amt = Number(t.amount);
+      const bucket: "MOMO" | "CASH" | "BANK" =
+        t.payment_method === "CASH" ? "CASH"
+        : t.payment_method === "BANK" ? "BANK"
+        : "MOMO";
+      buckets[bucket].total += amt;
+      buckets[bucket].count += 1;
+      if (t.type === "REGISTRATION") buckets[bucket].registration += amt;
+      else if (t.type === "TUITION") buckets[bucket].tuition += amt;
+    }
+    const grand = buckets.MOMO.total + buckets.CASH.total + buckets.BANK.total;
+    return { buckets, grand };
+  });

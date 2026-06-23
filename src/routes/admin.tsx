@@ -7,12 +7,13 @@ import QRCode from "qrcode";
 import { jsPDF } from "jspdf";
 import {
   GraduationCap, LogOut, Loader2, ShieldAlert, QrCode, Download, Wallet, Users, Clock,
-  Plus, Trash2, UserPlus, Filter,
+  Plus, Trash2, UserPlus, Filter, Smartphone, Banknote, Landmark,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyRole, claimAdminIfNone, getAdminOverview, getSchoolConfig, updateSchoolConfig,
   listClasses, addClass, deleteClass, listBursars, createBursar, listStudentLedger,
+  getRevenueByRoute,
 } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/admin")({
@@ -107,6 +108,7 @@ function AdminShell() {
         ) : (
           <>
             <DashboardSummary />
+            <RevenueByRoute />
             <FinancialRulesEngine />
             <ClassSegments />
             <BursarProvisioning />
@@ -173,6 +175,60 @@ function Kpi({ icon: Icon, label, value, accent }: { icon: any; label: string; v
       <div className="mt-2 text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-1 text-2xl font-bold">{value}</div>
     </div>
+  );
+}
+
+/* ===== Revenue by payment route ===== */
+function RevenueByRoute() {
+  const fn = useServerFn(getRevenueByRoute);
+  const { data } = useQuery({ queryKey: ["revenue-by-route"], queryFn: () => fn() });
+  const buckets = data?.buckets;
+  const grand = data?.grand ?? 0;
+  const rows: { key: "MOMO" | "CASH" | "BANK"; label: string; sub: string; icon: any }[] = [
+    { key: "MOMO", label: "MoMo (Parent self-pay)", sub: "MTN MoMo + Orange Money", icon: Smartphone },
+    { key: "CASH", label: "Cash (Bursar counter)",  sub: "Received at the bursar's desk", icon: Banknote },
+    { key: "BANK", label: "Bank deposit",           sub: "Parent paid at bank, receipt verified", icon: Landmark },
+  ];
+  function pct(v: number) { return grand > 0 ? Math.round((v / grand) * 100) : 0; }
+  return (
+    <section>
+      <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+        1b · Revenue by Payment Route
+      </h2>
+      <div className="grid lg:grid-cols-3 gap-3">
+        {rows.map(r => {
+          const b = buckets?.[r.key] ?? { total: 0, registration: 0, tuition: 0, count: 0 };
+          const Icon = r.icon;
+          return (
+            <div key={r.key} className="card-surface p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <Icon className="h-6 w-6 text-primary" />
+                  <div className="mt-2 font-semibold">{r.label}</div>
+                  <div className="text-xs text-muted-foreground">{r.sub}</div>
+                </div>
+                <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{pct(b.total)}%</span>
+              </div>
+              <div className="mt-3 text-2xl font-bold">{b.total.toLocaleString()} <span className="text-sm font-normal text-muted-foreground">XAF</span></div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-muted rounded p-2">
+                  <div className="text-muted-foreground">Registration</div>
+                  <div className="font-mono">{b.registration.toLocaleString()}</div>
+                </div>
+                <div className="bg-muted rounded p-2">
+                  <div className="text-muted-foreground">Tuition</div>
+                  <div className="font-mono">{b.tuition.toLocaleString()}</div>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-muted-foreground">{b.count} transaction{b.count === 1 ? "" : "s"}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-2 text-xs text-muted-foreground">
+        Total across all routes: <strong className="text-foreground">{grand.toLocaleString()} XAF</strong>
+      </div>
+    </section>
   );
 }
 

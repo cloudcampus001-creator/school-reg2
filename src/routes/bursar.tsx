@@ -287,15 +287,16 @@ function PaymentDialog({ student, cashier, forcedType, onClose }: { student: any
   const qc = useQueryClient();
   const [type, setType] = useState<"REGISTRATION" | "TUITION">(forcedType ?? (student.is_registered ? "TUITION" : "REGISTRATION"));
   const [amount, setAmount] = useState<number>(0);
-  const [method, setMethod] = useState<"CASH" | "MTN_MOMO" | "ORANGE_MONEY" | "BANK">("CASH");
+  const [method, setMethod] = useState<"CASH" | "BANK">("CASH");
   const [phone, setPhone] = useState("");
+  const [bankRef, setBankRef] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit() {
     if (amount <= 0) return toast.error("Amount must be greater than 0");
     setBusy(true);
     try {
-      const res: any = await pay({ data: { student_id: student.id, type, amount, payment_method: method, payment_phone: phone || undefined } });
+      const res: any = await pay({ data: { student_id: student.id, type, amount, payment_method: method, payment_phone: method === "BANK" ? (bankRef || undefined) : (phone || undefined) } });
       printReceipt({
         reference: res.reference, created_at: new Date().toISOString(), type,
         amount, payment_method: method, payment_phone: phone,
@@ -328,15 +329,16 @@ function PaymentDialog({ student, cashier, forcedType, onClose }: { student: any
           </label>
           <label><span className="text-sm font-medium">Payment route</span>
             <select className="input-field mt-1" value={method} onChange={e => setMethod(e.target.value as any)}>
-              <option value="CASH">Cash</option>
-              <option value="MTN_MOMO">MTN MoMo</option>
-              <option value="ORANGE_MONEY">Orange Money</option>
-              <option value="BANK">Bank Transfer</option>
+              <option value="CASH">Cash (received at counter)</option>
+              <option value="BANK">Bank deposit (receipt verified)</option>
             </select>
+            <span className="text-xs text-muted-foreground mt-1 block">
+              MoMo payments are handled by parents directly from the portal.
+            </span>
           </label>
-          {(method === "MTN_MOMO" || method === "ORANGE_MONEY") && (
-            <label><span className="text-sm font-medium">Mobile number</span>
-              <input className="input-field mt-1" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+237 6XX XXX XXX" />
+          {method === "BANK" && (
+            <label><span className="text-sm font-medium">Bank receipt reference</span>
+              <input className="input-field mt-1" value={bankRef} onChange={e => setBankRef(e.target.value)} placeholder="e.g. BANK-RCPT-2026-0001" />
             </label>
           )}
           <div className="flex gap-2 mt-2">
