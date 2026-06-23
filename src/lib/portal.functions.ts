@@ -79,21 +79,63 @@ export const computeFees = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const sb = getClient();
     const [studentRes, configRes] = await Promise.all([
-      sb.from("students").select("id, class_id, tuition_paid, is_registered").eq("id", data.student_id).maybeSingle(),
+      sb.from("students").select("id, class_id, tuition_paid, is_registered, classes(segmented_registration_fee, segmented_tuition_fee)").eq("id", data.student_id).maybeSingle(),
       sb.from("school_configs").select("*").eq("school_id", DEMO_SCHOOL_ID).maybeSingle(),
     ]);
     if (studentRes.error) throw new Error(studentRes.error.message);
     if (configRes.error) throw new Error(configRes.error.message);
-    const s = studentRes.data!;
+    const s: any = studentRes.data!;
     const cfg = configRes.data!;
+    const segmented = cfg.fee_structure === "SEGMENTED";
+    const regFee = segmented && s.classes?.segmented_registration_fee != null
+      ? Number(s.classes.segmented_registration_fee) : Number(cfg.uniform_registration_fee);
+    const tuiFee = segmented && s.classes?.segmented_tuition_fee != null
+      ? Number(s.classes.segmented_tuition_fee) : Number(cfg.uniform_tuition_fee);
     return {
       currency: cfg.currency,
-      registration_fee: Number(cfg.uniform_registration_fee),
-      tuition_fee: Number(cfg.uniform_tuition_fee),
+      registration_fee: regFee,
+      tuition_fee: tuiFee,
       tuition_paid: Number(s.tuition_paid),
-      tuition_owed: Math.max(0, Number(cfg.uniform_tuition_fee) - Number(s.tuition_paid)),
+      tuition_owed: Math.max(0, tuiFee - Number(s.tuition_paid)),
       is_registered: s.is_registered,
     };
+  });
+
+// Public lookup for the "Pay tuition fee" portal flow.
+// Returns minimal info: name, class, matricule, fee, paid, remaining.
+export const findStudentForPayment = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    matricule: z.string().trim().min(1).max(64).optional(),
+    phone: z.string().trim().regex(phoneRe).optional(),
+  }).refine(v => v.matricule || v.phone, { message: "matricule or phone required" }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = getClient();
+    let q = sb.from("students")
+      .select("id, full_name, matricule, parent_phone, application_status, is_registered, tuition_paid, classes(name, segmented_tuition_fee)")
+      .eq("school_id", DEMO_SCHOOL_ID);
+    if (data.matricule) q = q.ilike("matricule", data.matricule.trim());
+    else q = q.eq("parent_phone", data.phone!);
+    const { data: rows, error } = await q.order("created_at", { ascending: false }).limit(10);
+    if (error) throw new Error(error.message);
+    const { data: cfg } = await sb.from("school_configs").select("*").eq("school_id", DEMO_SCHOOL_ID).maybeSingle();
+    const segmented = cfg?.fee_structure === "SEGMENTED";
+    return (rows ?? []).map((s: any) => {
+      const fee = segmented && s.classes?.segmented_tuition_fee != null
+        ? Number(s.classes.segmented_tuition_fee) : Number(cfg?.uniform_tuition_fee ?? 0);
+      const paid = Number(s.tuition_paid);
+      return {
+        id: s.id,
+        full_name: s.full_name,
+        matricule: s.matricule,
+        class_name: s.classes?.name ?? null,
+        application_status: s.application_status,
+        is_registered: s.is_registered,
+        tuition_fee: fee,
+        tuition_paid: paid,
+        tuition_owed: Math.max(0, fee - paid),
+        currency: cfg?.currency ?? "XAF",
+      };
+    });
   });
 
 // Parent-initiated payment (no auth required, but only if application is APPROVED).
