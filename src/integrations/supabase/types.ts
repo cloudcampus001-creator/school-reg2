@@ -14,16 +14,324 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      classes: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          school_id: string
+          segmented_registration_fee: number | null
+          segmented_tuition_fee: number | null
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          school_id: string
+          segmented_registration_fee?: number | null
+          segmented_tuition_fee?: number | null
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          school_id?: string
+          segmented_registration_fee?: number | null
+          segmented_tuition_fee?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "classes_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          payment_method: string
+          payment_phone: string | null
+          reference: string | null
+          school_id: string
+          status: Database["public"]["Enums"]["transaction_status"]
+          student_id: string
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          payment_method: string
+          payment_phone?: string | null
+          reference?: string | null
+          school_id: string
+          status?: Database["public"]["Enums"]["transaction_status"]
+          student_id: string
+          type: Database["public"]["Enums"]["transaction_type"]
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          payment_method?: string
+          payment_phone?: string | null
+          reference?: string | null
+          school_id?: string
+          status?: Database["public"]["Enums"]["transaction_status"]
+          student_id?: string
+          type?: Database["public"]["Enums"]["transaction_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_jobs: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          school_id: string
+          status: Database["public"]["Enums"]["print_job_status"]
+          transaction_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          school_id: string
+          status?: Database["public"]["Enums"]["print_job_status"]
+          transaction_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          school_id?: string
+          status?: Database["public"]["Enums"]["print_job_status"]
+          transaction_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_jobs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_jobs_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_configs: {
+        Row: {
+          created_at: string
+          currency: string
+          fee_structure: Database["public"]["Enums"]["fee_structure"]
+          id: string
+          school_id: string
+          settlement_account: string | null
+          uniform_registration_fee: number
+          uniform_tuition_fee: number
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          fee_structure?: Database["public"]["Enums"]["fee_structure"]
+          id?: string
+          school_id: string
+          settlement_account?: string | null
+          uniform_registration_fee?: number
+          uniform_tuition_fee?: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          fee_structure?: Database["public"]["Enums"]["fee_structure"]
+          id?: string
+          school_id?: string
+          settlement_account?: string | null
+          uniform_registration_fee?: number
+          uniform_tuition_fee?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_configs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: true
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          application_status: Database["public"]["Enums"]["application_status"]
+          class_id: string | null
+          created_at: string
+          date_of_birth: string
+          full_name: string
+          gender: string
+          id: string
+          is_registered: boolean
+          matricule: string | null
+          parent_phone: string
+          place_of_birth: string | null
+          school_id: string
+          tuition_paid: number
+          updated_at: string
+        }
+        Insert: {
+          application_status?: Database["public"]["Enums"]["application_status"]
+          class_id?: string | null
+          created_at?: string
+          date_of_birth: string
+          full_name: string
+          gender: string
+          id?: string
+          is_registered?: boolean
+          matricule?: string | null
+          parent_phone: string
+          place_of_birth?: string | null
+          school_id: string
+          tuition_paid?: number
+          updated_at?: string
+        }
+        Update: {
+          application_status?: Database["public"]["Enums"]["application_status"]
+          class_id?: string | null
+          created_at?: string
+          date_of_birth?: string
+          full_name?: string
+          gender?: string
+          id?: string
+          is_registered?: boolean
+          matricule?: string | null
+          parent_phone?: string
+          place_of_birth?: string | null
+          school_id?: string
+          tuition_paid?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          school_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_matricule: { Args: { _school_slug: string }; Returns: string }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "bursar"
+      application_status: "PENDING_REVIEW" | "APPROVED" | "REJECTED"
+      fee_structure: "UNIFORM" | "SEGMENTED"
+      print_job_status: "PENDING" | "PRINTED" | "FAILED"
+      transaction_status: "PENDING" | "SUCCESS" | "FAILED"
+      transaction_type: "REGISTRATION" | "TUITION"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +458,13 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "bursar"],
+      application_status: ["PENDING_REVIEW", "APPROVED", "REJECTED"],
+      fee_structure: ["UNIFORM", "SEGMENTED"],
+      print_job_status: ["PENDING", "PRINTED", "FAILED"],
+      transaction_status: ["PENDING", "SUCCESS", "FAILED"],
+      transaction_type: ["REGISTRATION", "TUITION"],
+    },
   },
 } as const
