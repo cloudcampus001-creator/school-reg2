@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import {
   getSchoolBootstrap, registerStudent, getStudent, recoverByPhone, computeFees, parentPay,
+  findStudentForPayment,
 } from "@/lib/portal.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { printReceipt } from "@/lib/receipt";
@@ -23,7 +24,7 @@ export const Route = createFileRoute("/portal")({
 });
 
 const STORAGE_KEY = "edu_app_id";
-type Mode = "home" | "register" | "status" | "recover";
+type Mode = "home" | "register" | "status" | "recover" | "paytuition";
 
 function Portal() {
   const [mode, setMode] = useState<Mode>("home");
@@ -63,6 +64,7 @@ function Portal() {
         {mode === "register" && <RegisterForm onSuccess={gotoStatus} />}
         {mode === "status" && studentId && <Status studentId={studentId} onClear={clearSession} />}
         {mode === "recover" && <Recover />}
+        {mode === "paytuition" && <PayTuitionFlow />}
       </main>
     </div>
   );
@@ -82,11 +84,16 @@ function Home({ onChoose, hasSession, resume }: { onChoose: (m: Mode) => void; h
           <Clock className="h-5 w-5 text-primary" />
         </button>
       )}
-      <div className="mt-6 grid sm:grid-cols-2 gap-3">
+      <div className="mt-6 grid sm:grid-cols-3 gap-3">
         <button onClick={() => onChoose("register")} className="card-surface p-5 text-left hover:border-primary transition">
           <UserPlus className="h-6 w-6 text-primary" />
           <div className="mt-3 font-semibold">Register a student</div>
           <div className="text-sm text-muted-foreground">Submit a new application</div>
+        </button>
+        <button onClick={() => onChoose("paytuition")} className="card-surface p-5 text-left hover:border-primary transition">
+          <Wallet className="h-6 w-6 text-primary" />
+          <div className="mt-3 font-semibold">Pay tuition fee</div>
+          <div className="text-sm text-muted-foreground">By matricule or parent phone</div>
         </button>
         <button onClick={() => onChoose("recover")} className="card-surface p-5 text-left hover:border-primary transition">
           <Search className="h-6 w-6 text-primary" />
