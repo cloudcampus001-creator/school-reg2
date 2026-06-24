@@ -76,15 +76,16 @@ function Portal() {
 }
 
 function Home({ onChoose, hasSession, resume }: { onChoose: (m: Mode) => void; hasSession: boolean; resume: () => void }) {
+  const t = useT();
   return (
     <div className="card-surface p-8">
-      <h1 className="text-3xl font-bold">Welcome, parent.</h1>
-      <p className="mt-1 text-muted-foreground">What would you like to do today?</p>
+      <h1 className="text-3xl font-bold">{t("Welcome, parent.")}</h1>
+      <p className="mt-1 text-muted-foreground">{t("What would you like to do today?")}</p>
       {hasSession && (
         <button onClick={resume} className="mt-6 w-full text-left card-surface p-4 hover:border-primary transition flex items-center justify-between">
           <div>
-            <div className="font-semibold">Resume my application</div>
-            <div className="text-sm text-muted-foreground">Continue where you left off</div>
+            <div className="font-semibold">{t("Resume my application")}</div>
+            <div className="text-sm text-muted-foreground">{t("Continue where you left off")}</div>
           </div>
           <Clock className="h-5 w-5 text-primary" />
         </button>
@@ -92,18 +93,18 @@ function Home({ onChoose, hasSession, resume }: { onChoose: (m: Mode) => void; h
       <div className="mt-6 grid sm:grid-cols-3 gap-3">
         <button onClick={() => onChoose("register")} className="card-surface p-5 text-left hover:border-primary transition">
           <UserPlus className="h-6 w-6 text-primary" />
-          <div className="mt-3 font-semibold">Register a student</div>
-          <div className="text-sm text-muted-foreground">Submit a new application</div>
+          <div className="mt-3 font-semibold">{t("Register a student")}</div>
+          <div className="text-sm text-muted-foreground">{t("Submit a new application")}</div>
         </button>
         <button onClick={() => onChoose("paytuition")} className="card-surface p-5 text-left hover:border-primary transition">
           <Wallet className="h-6 w-6 text-primary" />
-          <div className="mt-3 font-semibold">Pay tuition fee</div>
-          <div className="text-sm text-muted-foreground">By matricule or parent phone</div>
+          <div className="mt-3 font-semibold">{t("Pay tuition fee")}</div>
+          <div className="text-sm text-muted-foreground">{t("By matricule or parent phone")}</div>
         </button>
         <button onClick={() => onChoose("recover")} className="card-surface p-5 text-left hover:border-primary transition">
           <Search className="h-6 w-6 text-primary" />
-          <div className="mt-3 font-semibold">Recover matricule</div>
-          <div className="text-sm text-muted-foreground">Look up by phone number</div>
+          <div className="mt-3 font-semibold">{t("Recover matricule")}</div>
+          <div className="text-sm text-muted-foreground">{t("Look up by phone number")}</div>
         </button>
       </div>
     </div>
