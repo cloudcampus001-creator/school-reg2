@@ -12,6 +12,7 @@ import {
 } from "@/lib/portal.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { printReceipt } from "@/lib/receipt";
+import { useT, LangSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/portal")({
   head: () => ({
@@ -27,6 +28,7 @@ const STORAGE_KEY = "edu_app_id";
 type Mode = "home" | "register" | "status" | "recover" | "paytuition";
 
 function Portal() {
+  const t = useT();
   const [mode, setMode] = useState<Mode>("home");
   const [studentId, setStudentId] = useState<string | null>(null);
 
@@ -52,11 +54,14 @@ function Portal() {
           </span>
           SchoolConnect
         </Link>
-        {mode !== "home" && mode !== "status" && (
-          <button className="btn-ghost" onClick={() => setMode("home")}>
-            <ArrowLeft className="h-4 w-4" /> Back
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <LangSwitcher />
+          {mode !== "home" && mode !== "status" && (
+            <button className="btn-ghost" onClick={() => setMode("home")}>
+              <ArrowLeft className="h-4 w-4" /> {t("Back")}
+            </button>
+          )}
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-5 pb-16">

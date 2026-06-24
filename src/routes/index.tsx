@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { GraduationCap, ShieldCheck, Smartphone, Printer, Search, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useT, LangSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -14,6 +15,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
+  const t = useT();
   return (
     <div className="min-h-screen">
       {/* Nav */}
@@ -25,35 +27,35 @@ function Landing() {
           SchoolConnect
         </Link>
         <nav className="flex items-center gap-2">
-          <Link to="/portal" className="btn-ghost hidden sm:inline-flex">Parent portal</Link>
-          <Link to="/auth" className="btn-outline">School staff</Link>
+          <LangSwitcher />
+          <Link to="/portal" className="btn-ghost hidden sm:inline-flex">{t("Parent portal")}</Link>
+          <Link to="/auth" className="btn-outline">{t("School staff")}</Link>
         </nav>
       </header>
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-5 pt-10 pb-20 grid lg:grid-cols-12 gap-10 items-center">
         <div className="lg:col-span-7">
-          <span className="chip">Built for schools in Cameroon</span>
+          <span className="chip">{t("Built for schools in Cameroon")}</span>
           <h1 className="mt-4 text-4xl sm:text-5xl lg:text-6xl font-bold leading-[1.05]">
-            Skip the registration queue.
-            <span className="block text-primary">Pay tuition from your phone.</span>
+            {t("Skip the registration queue.")}
+            <span className="block text-primary">{t("Pay tuition from your phone.")}</span>
           </h1>
           <p className="mt-5 text-lg text-muted-foreground max-w-xl">
-            SchoolConnect digitises admissions, mobile-money payments, and printed receipts into one
-            simple workflow — for parents, bursars, and school admins.
+            {t("SchoolConnect digitises admissions, mobile-money payments, and printed receipts into one simple workflow — for parents, bursars, and school admins.")}
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/portal" className="btn-primary">
-              Open parent portal <ArrowRight className="h-4 w-4" />
+              {t("Open parent portal")} <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/auth" className="btn-outline">
-              School admin sign in
+              {t("School admin sign in")}
             </Link>
           </div>
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
-            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> Zero-contact admission</div>
-            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> MTN & Orange Money</div>
-            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> Thermal printing</div>
+            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> {t("Zero-contact admission")}</div>
+            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> {t("MTN & Orange Money")}</div>
+            <div className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-success" /> {t("Thermal printing")}</div>
           </div>
         </div>
 
@@ -82,16 +84,16 @@ function Landing() {
 
       {/* Features */}
       <section className="max-w-6xl mx-auto px-5 py-16">
-        <h2 className="text-3xl font-bold">One platform, every step.</h2>
+        <h2 className="text-3xl font-bold">{t("One platform, every step.")}</h2>
         <p className="mt-2 text-muted-foreground max-w-2xl">
-          From the application form to the printed receipt at the school gate.
+          {t("From the application form to the printed receipt at the school gate.")}
         </p>
         <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { icon: GraduationCap, title: "Online admissions", body: "Parents submit applications in minutes. Real-time status updates." },
-            { icon: Smartphone, title: "Mobile money", body: "MTN MoMo & Orange Money for registration and tuition payments." },
-            { icon: Search, title: "Matricule recovery", body: "Lost a matricule? Look it up by parent phone number." },
-            { icon: Printer, title: "Thermal receipts", body: "Print queue feeds Bluetooth thermal printers at the bursar's desk." },
+            { icon: GraduationCap, title: t("Online admissions"), body: t("Parents submit applications in minutes. Real-time status updates.") },
+            { icon: Smartphone, title: t("Mobile money"), body: t("MTN MoMo & Orange Money for registration and tuition payments.") },
+            { icon: Search, title: t("Matricule recovery"), body: t("Lost a matricule? Look it up by parent phone number.") },
+            { icon: Printer, title: t("Thermal receipts"), body: t("Print queue feeds Bluetooth thermal printers at the bursar's desk.") },
           ].map((f) => (
             <div key={f.title} className="card-surface p-5">
               <div className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
@@ -108,20 +110,20 @@ function Landing() {
       <section className="max-w-6xl mx-auto px-5 pb-24">
         <div className="card-surface hero-gradient p-10 text-center">
           <ShieldCheck className="h-10 w-10 mx-auto opacity-90" />
-          <h2 className="mt-4 text-3xl font-bold">Try the live demo</h2>
+          <h2 className="mt-4 text-3xl font-bold">{t("Try the live demo")}</h2>
           <p className="mt-2 opacity-90 max-w-xl mx-auto">
-            Register a student at the demo school, watch the status update in real time, and pay with simulated mobile money.
+            {t("Register a student at the demo school, watch the status update in real time, and pay with simulated mobile money.")}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/portal" className="btn-outline">Parent portal</Link>
-            <Link to="/auth" className="btn-outline">Admin sign-in</Link>
+            <Link to="/portal" className="btn-outline">{t("Parent portal")}</Link>
+            <Link to="/auth" className="btn-outline">{t("Admin sign-in")}</Link>
           </div>
         </div>
       </section>
 
       <footer className="max-w-6xl mx-auto px-5 py-8 text-sm text-muted-foreground flex justify-between">
         <div>© {new Date().getFullYear()} SchoolConnect</div>
-        <div>Built for schools in Cameroon · XAF</div>
+        <div>{t("Built for schools in Cameroon · XAF")}</div>
       </footer>
     </div>
   );
