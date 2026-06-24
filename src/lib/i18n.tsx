@@ -95,7 +95,6 @@ const FR: Record<string, string> = {
   "Or leave it — the bursar can collect at the desk.":
     "Ou laissez-le — l'économe peut encaisser au comptoir.",
   "Switch to another student": "Changer d'élève",
-  "Pay registration": "Payer l'inscription",
   "Amount (XAF)": "Montant (XAF)",
   "Payment method": "Mode de paiement",
   "Mobile number": "Numéro mobile",
