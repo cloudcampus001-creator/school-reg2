@@ -146,6 +146,25 @@ export async function performPayment(data: {
   if (!student) throw new Error("Student not found");
   if (student.application_status !== "APPROVED")
     throw new Error("Application must be approved before payment");
+  if (data.type === "REGISTRATION" && student.is_registered)
+    throw new Error("This student is already registered — registration cannot be paid twice.");
+  if (data.type === "TUITION") {
+    // Compute tuition fee + already-paid so we can reject overpay client-side too
+    // (the DB trigger also enforces this — belt and braces).
+    const { data: cfg } = await supabaseAdmin
+      .from("school_configs").select("fee_structure, uniform_tuition_fee")
+      .eq("school_id", student.school_id).maybeSingle();
+    let fee = Number(cfg?.uniform_tuition_fee ?? 0);
+    if (cfg?.fee_structure === "SEGMENTED" && student.class_id) {
+      const { data: cls } = await supabaseAdmin
+        .from("classes").select("segmented_tuition_fee").eq("id", student.class_id).maybeSingle();
+      if (cls?.segmented_tuition_fee != null) fee = Number(cls.segmented_tuition_fee);
+    }
+    const paid = Number(student.tuition_paid);
+    const remaining = Math.max(0, fee - paid);
+    if (remaining <= 0) throw new Error("Tuition is already fully paid for this student.");
+    if (data.amount > remaining) throw new Error(`Amount exceeds remaining tuition (${remaining.toLocaleString()} XAF left).`);
+  }
 
   const reference = "TX-" + Math.random().toString(36).slice(2, 10).toUpperCase();
   const { data: tx, error: tErr } = await supabaseAdmin
@@ -172,3 +191,37 @@ export async function performPayment(data: {
 
   return { transaction_id: tx.id, reference };
 }
+
+// Registered + approved students with their tuition computation.
+// Bursar UI uses this to render the clickable "Registered Students" table.
+export const listRegisteredStudents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await ensureStaff(context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const [studentsRes, cfgRes] = await Promise.all([
+      supabaseAdmin.from("students")
+        .select("id, full_name, matricule, parent_phone, tuition_paid, class_id, application_status, is_registered, classes(name, segmented_tuition_fee)")
+        .eq("school_id", DEMO_SCHOOL_ID).eq("application_status", "APPROVED").eq("is_registered", true)
+        .order("full_name", { ascending: true }),
+      supabaseAdmin.from("school_configs").select("fee_structure, uniform_tuition_fee, currency")
+        .eq("school_id", DEMO_SCHOOL_ID).maybeSingle(),
+    ]);
+    if (studentsRes.error) throw new Error(studentsRes.error.message);
+    const cfg = cfgRes.data;
+    const segmented = cfg?.fee_structure === "SEGMENTED";
+    return (studentsRes.data ?? []).map((s: any) => {
+      const fee = segmented && s.classes?.segmented_tuition_fee != null
+        ? Number(s.classes.segmented_tuition_fee) : Number(cfg?.uniform_tuition_fee ?? 0);
+      const paid = Number(s.tuition_paid);
+      return {
+        id: s.id, full_name: s.full_name, matricule: s.matricule,
+        parent_phone: s.parent_phone, class_id: s.class_id,
+        class_name: s.classes?.name ?? null,
+        tuition_fee: fee, tuition_paid: paid,
+        tuition_owed: Math.max(0, fee - paid),
+        currency: cfg?.currency ?? "XAF",
+        is_registered: true,
+      };
+    });
+  });

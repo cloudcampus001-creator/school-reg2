@@ -15,6 +15,7 @@ import {
   listClasses, addClass, deleteClass, listBursars, createBursar, listStudentLedger,
   getRevenueByRoute,
 } from "@/lib/admin.functions";
+import { useT, LangSwitcher } from "@/lib/i18n";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Admin Command Board · SchoolConnect" }] }),
@@ -83,7 +84,10 @@ function AdminShell() {
             </span>
             Command Board · Admin
           </Link>
-          <button onClick={signOut} className="btn-ghost"><LogOut className="h-4 w-4" /> Sign out</button>
+          <div className="flex items-center gap-3">
+            <LangSwitcher />
+            <button onClick={signOut} className="btn-ghost"><LogOut className="h-4 w-4" /> Sign out</button>
+          </div>
         </div>
       </header>
 
@@ -382,16 +386,61 @@ function StudentLedger() {
   });
 
   function exportCsv() {
-    const header = ["Matricule","Full Name","Class","Verification","Tuition Paid (XAF)"];
-    const body = (rows ?? []).map((r: any) => [
-      r.matricule ?? "", r.full_name, r.classes?.name ?? "",
-      r.application_status, Number(r.tuition_paid).toString(),
-    ]);
-    const csv = [header, ...body].map(r => r.map(c => `"${String(c).replaceAll('"','""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "student-ledger.csv"; a.click();
-    URL.revokeObjectURL(url);
+    // Master Export — PDF with one class per page.
+    const pdf = new jsPDF({ unit: "mm", format: "a4" });
+    const list = rows ?? [];
+    // Group by class name (fall back to "Unassigned"); if a filter is active,
+    // there's effectively only one group.
+    const groups = new Map<string, any[]>();
+    for (const r of list as any[]) {
+      const key = r.classes?.name ?? "Unassigned";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(r);
+    }
+    const classNames = Array.from(groups.keys()).sort();
+    if (classNames.length === 0) classNames.push("Unassigned");
+
+    classNames.forEach((cls, idx) => {
+      if (idx > 0) pdf.addPage();
+      const items = groups.get(cls) ?? [];
+      const today = new Date().toLocaleDateString();
+      pdf.setFontSize(16); pdf.text("Demo Academy — Master Export", 105, 18, { align: "center" });
+      pdf.setFontSize(11); pdf.text(`Class: ${cls}`, 14, 28);
+      pdf.text(`Generated: ${today}`, 196, 28, { align: "right" });
+      pdf.setDrawColor(180); pdf.line(14, 31, 196, 31);
+
+      // Header row
+      pdf.setFontSize(9); pdf.setFont("helvetica", "bold");
+      pdf.text("Matricule", 14, 38);
+      pdf.text("Full Name", 52, 38);
+      pdf.text("Status", 120, 38);
+      pdf.text("Tuition Paid (XAF)", 196, 38, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+
+      let y = 44;
+      const totalPaid = items.reduce((s, r) => s + Number(r.tuition_paid), 0);
+      for (const r of items) {
+        if (y > 280) { pdf.addPage(); y = 20; }
+        pdf.text(String(r.matricule ?? "—"), 14, y);
+        pdf.text(String(r.full_name).slice(0, 36), 52, y);
+        pdf.text(String(r.application_status).replace("_", " "), 120, y);
+        pdf.text(Number(r.tuition_paid).toLocaleString(), 196, y, { align: "right" });
+        y += 6;
+      }
+      if (items.length === 0) { pdf.text("No students in this class.", 14, y); y += 6; }
+      pdf.setDrawColor(180); pdf.line(14, y, 196, y); y += 6;
+      pdf.setFont("helvetica", "bold");
+      pdf.text(`Students: ${items.length}`, 14, y);
+      pdf.text(`Total tuition collected: ${totalPaid.toLocaleString()} XAF`, 196, y, { align: "right" });
+      pdf.setFont("helvetica", "normal");
+
+      // Footer
+      pdf.setFontSize(8); pdf.setTextColor(140);
+      pdf.text(`Page ${idx + 1} / ${classNames.length}`, 105, 292, { align: "center" });
+      pdf.setTextColor(0);
+    });
+
+    pdf.save("student-ledger.pdf");
   }
 
   return (
